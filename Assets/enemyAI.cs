@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using System;
 
 public class enemyAI : MonoBehaviour, IDamage
 {
@@ -84,7 +85,7 @@ public class enemyAI : MonoBehaviour, IDamage
 
     bool canSeePlayer()
     {
-        playerDir = gameManager.instance.Player.transform.position - headPOS.position;
+        playerDir = GameManager.instance.Player.transform.position - headPOS.position;
         angleToPlayer = Vector3.Angle(playerDir, transform.forward);
 
         Debug.DrawRay(headPOS.position, playerDir);
@@ -95,7 +96,7 @@ public class enemyAI : MonoBehaviour, IDamage
             if (hit.collider.CompareTag("Player") && angleToPlayer <= FOV)
             {
 
-                agent.SetDestination(gameManager.instance.Player.transform.position);
+                agent.SetDestination(GameManager.instance.Player.transform.position);
 
                 if (agent.remainingDistance < agent.stoppingDistance)
                 {
@@ -141,7 +142,7 @@ public class enemyAI : MonoBehaviour, IDamage
         HP -= amount;
 
         if (agent.isActiveAndEnabled)
-            agent.SetDestination(gameManager.instance.Player.transform.position);
+            agent.SetDestination(GameManager.instance.Player.transform.position);
 
         if (Co != null)
             StopCoroutine(Co);
@@ -153,7 +154,7 @@ public class enemyAI : MonoBehaviour, IDamage
         if (HP <= 0)
         {
             //I'm dead
-            gameManager.instance.updateGameGoal(-1);
+            GameManager.instance.updateGameGoal(-1);
             Destroy(gameObject);
         }
     }
@@ -176,5 +177,8 @@ public class enemyAI : MonoBehaviour, IDamage
         model.material.color = colorOrig;
     }
 
-
+    public void TakeDamage(int amount)
+    {
+        throw new NotImplementedException();
+    }
 }
