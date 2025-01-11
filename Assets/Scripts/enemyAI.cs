@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
 using System;
 
 public class enemyAI : MonoBehaviour, IDamage
@@ -10,6 +11,8 @@ public class enemyAI : MonoBehaviour, IDamage
     [SerializeField] Renderer model;
     [SerializeField] NavMeshAgent agent;
     [SerializeField] Animator anim;
+    [SerializeField] Image HPBar;
+
 
     [SerializeField] Transform ShootPos;
     [SerializeField] Transform headPos;
@@ -29,10 +32,16 @@ public class enemyAI : MonoBehaviour, IDamage
     bool isShooting;
     bool isRoaming;
 
+    Vector3 playerDir;
+    Vector3 startingPos;
+
     Color colorOrig;
 
     float angleToPlayer;
     float stoppingDistOrig;
+
+    int HPOrig;
+
 
     Coroutine Co;
 
@@ -55,70 +64,71 @@ public class enemyAI : MonoBehaviour, IDamage
             if (playerInRange && !canSeePlayer())
             {
                 if (!isRoaming && agent.remainingDistance < 0.01f)
-                    Co = StartCoroutine(roamDist());
-
-            }else if (!playerInRange)
+                    Co = StartCoroutine(roam());
+            }
+            else if (!playerInRange)
             {
                 if (!isRoaming && agent.remainingDistance < 0.01f)
-                    Co = StartCoroutine(roamDist());
+                    Co = StartCoroutine(roam());
+
             }
         }
-    }
 
-    IEnumerator roam()
-    {
-        isRoaming = true;
-        yield return new WaitForSeconds(roamTimer);
-
-        agent.stoppingDistance = 0;
-
-
-        Vector3 randomPos = Random.insideUnitSphere * roamDist;
-        randomPos += startingPos;
-
-        NavMeshHit hit;
-        NavMesh.SamplePosition(randomPos, out hit, roamDist, 1);
-        agent.SetDestination(hit.position);
-
-        isRoaming = false;
-    }
-
-    bool canSeePlayer()
-    {
-        playerDir = GameManager.instance.Player.transform.position - headPOS.position;
-        angleToPlayer = Vector3.Angle(playerDir, transform.forward);
-
-        Debug.DrawRay(headPOS.position, playerDir);
-
-        RaycastHit hit;
-        if (Physics.Raycast(headPOS.position, playerDir, out hit))
+        IEnumerator roam()
         {
-            if (hit.collider.CompareTag("Player") && angleToPlayer <= FOV)
-            {
+            isRoaming = true;
+            yield return new WaitForSeconds(roamTimer);
 
-                agent.SetDestination(GameManager.instance.Player.transform.position);
+            agent.stoppingDistance = 0;
 
-                if (agent.remainingDistance < agent.stoppingDistance)
-                {
-                    faceTarget();
-                }
 
-                if (!isShooting)
-                {
-                    StartCoroutine(shoot());
-                }
-                agent.stoppingDistance = stoppingDistOrig;
-                return true;
-            }
+            Vector3 randomPos = UnityEngine.Random.insideUnitSphere * roamDist;
+            randomPos += startingPos;
+
+            NavMeshHit hit;
+            NavMesh.SamplePosition(randomPos, out hit, roamDist, 1);
+            agent.SetDestination(hit.position);
+
+            isRoaming = false;
         }
-        agent.stoppingDistance = 0;
-        return false;
-    }
 
-    void faceTarget()
-    {
-        Quaternion rot = Quaternion.LookRotation(playerDir);
-        transform.rotation = Quaternion.Lerp(transform.rotation, rot, Time.deltaTime * faceTargetSpeed);
+        bool canSeePlayer()
+        {
+            playerDir = GameManager.instance.player.transform.position - headPos.position;
+            angleToPlayer = Vector3.Angle(playerDir, transform.forward);
+
+            Debug.DrawRay(headPos.position, playerDir);
+
+            RaycastHit hit;
+            if (Physics.Raycast(headPos.position, playerDir, out hit))
+            {
+                if (hit.collider.CompareTag("Player") && angleToPlayer <= FOV)
+                {
+
+                    agent.SetDestination(GameManager.instance.player.transform.position);
+
+                    if (agent.remainingDistance < agent.stoppingDistance)
+                    {
+                        faceTarget();
+                    }
+
+                    if (!isShooting)
+                    {
+                        StartCoroutine(shoot());
+                    }
+                    agent.stoppingDistance = stoppingDistOrig;
+                    return true;
+                }
+            }
+            agent.stoppingDistance = 0;
+            return false;
+        }
+
+        void faceTarget()
+        {
+            Quaternion rot = Quaternion.LookRotation(playerDir);
+            transform.rotation = Quaternion.Lerp(transform.rotation, rot, Time.deltaTime * faceTargetSpeed);
+        }
     }
     private void OnTriggerEnter(Collider other)
     {
@@ -142,7 +152,7 @@ public class enemyAI : MonoBehaviour, IDamage
         HP -= amount;
 
         if (agent.isActiveAndEnabled)
-            agent.SetDestination(GameManager.instance.Player.transform.position);
+            agent.SetDestination(GameManager.instance.player.transform.position);
 
         if (Co != null)
             StopCoroutine(Co);
@@ -176,6 +186,12 @@ public class enemyAI : MonoBehaviour, IDamage
         yield return new WaitForSeconds(0.1f);
         model.material.color = colorOrig;
     }
+
+    void updateUI()
+    {
+        HPBar.fillAmount = (float)HP / HPOrig;
+    }
+
 
     public void TakeDamage(int amount)
     {
